@@ -15,9 +15,17 @@ type PromptCardProps = {
   prompt: PromptItem;
   glowClass: string;
   onCopy: (prompt: PromptItem) => void;
+  isFavorite: boolean;
+  onToggleFavorite: (prompt: PromptItem) => void;
 };
 
-export default function PromptCard({ prompt, glowClass, onCopy }: PromptCardProps) {
+export default function PromptCard({
+  prompt,
+  glowClass,
+  onCopy,
+  isFavorite,
+  onToggleFavorite,
+}: PromptCardProps) {
   return (
     <div
       className={`group relative flex h-full flex-col overflow-hidden rounded-2xl border border-white/10 bg-[var(--card-bg)] p-5 backdrop-blur-xl transition hover:-translate-y-1 hover:border-sky-400/50 hover:shadow-[0_20px_50px_rgba(10,14,30,0.6),0_0_24px_rgba(120,160,255,0.25)] ${glowClass}`}
@@ -42,10 +50,16 @@ export default function PromptCard({ prompt, glowClass, onCopy }: PromptCardProp
         </div>
         <div className="flex items-center justify-end gap-2 pt-2">
           <button
-            className="opacity-0 transition group-hover:opacity-100"
+            onClick={() => onToggleFavorite(prompt)}
+            aria-pressed={isFavorite}
+            className={`rounded-full border p-2 transition ${
+              isFavorite
+                ? "border-sky-400/40 bg-sky-500/20 text-sky-200 shadow-[0_0_12px_rgba(120,160,255,0.45)]"
+                : "border-white/10 bg-white/5 text-white/60 hover:border-white/30 hover:text-white"
+            }`}
             aria-label="Save prompt"
           >
-            <BookmarkIcon className="h-4 w-4 text-white/70" />
+            <BookmarkIcon className="h-4 w-4" filled={isFavorite} />
           </button>
           <button
             onClick={() => onCopy(prompt)}
@@ -77,12 +91,18 @@ function CopyIcon({ className }: { className?: string }) {
   );
 }
 
-function BookmarkIcon({ className }: { className?: string }) {
+function BookmarkIcon({
+  className,
+  filled,
+}: {
+  className?: string;
+  filled?: boolean;
+}) {
   return (
     <svg
       className={className}
       viewBox="0 0 24 24"
-      fill="none"
+      fill={filled ? "currentColor" : "none"}
       stroke="currentColor"
       strokeWidth="2"
       strokeLinecap="round"

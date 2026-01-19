@@ -18,10 +18,9 @@ type SidebarProps = {
 };
 
 const defaultNavItems = [
-  { name: "Dashboard", active: false, href: "/" },
   { name: "Library", active: true, href: "/" },
-  { name: "Favorites", active: false, href: "/" },
-  { name: "Settings", active: false, href: "/" },
+  { name: "Favorites", active: false, href: "/favorites" },
+  { name: "Settings", active: false, href: "/settings" },
 ];
 
 export default function Sidebar({
@@ -40,17 +39,17 @@ export default function Sidebar({
         <span>Promptly</span>
       </div>
 
-      <nav className="mt-10 flex flex-1 flex-col gap-2 overflow-hidden">
+      <nav className="mt-10 flex flex-1 flex-col gap-3 overflow-hidden">
         {items.map((item) => {
           const isActive = activeItem
             ? activeItem === item.name
             : item.href
               ? pathname === item.href || pathname.startsWith(`${item.href}/`)
               : item.active;
-          const classes = `relative flex items-center gap-3 rounded-xl px-4 py-2 text-sm font-medium transition ${
+          const classes = `relative flex items-center gap-3 rounded-xl border px-4 py-2.5 text-sm font-medium transition ${
             isActive
-              ? "bg-sky-500/10 text-white shadow-[0_0_16px_rgba(96,165,250,0.35)]"
-              : "text-white/70 hover:bg-white/5 hover:text-white"
+              ? "border-sky-400/30 bg-gradient-to-r from-sky-500/15 to-indigo-500/10 text-white shadow-[0_0_18px_rgba(96,165,250,0.35)]"
+              : "border-white/5 bg-white/5 text-white/70 hover:border-white/15 hover:bg-white/10 hover:text-white"
           }`;
 
           const content = (
@@ -58,7 +57,13 @@ export default function Sidebar({
               {isActive && (
                 <span className="absolute left-0 top-1/2 h-6 w-1 -translate-y-1/2 rounded-full bg-sky-400 shadow-[0_0_12px_rgba(96,165,250,0.9)]" />
               )}
-              <span className="h-2 w-2 rounded-full bg-white/60"></span>
+              <span
+                className={`h-2.5 w-2.5 rounded-full border ${
+                  isActive
+                    ? "border-sky-300/60 bg-sky-400/70 shadow-[0_0_8px_rgba(96,165,250,0.8)]"
+                    : "border-white/30 bg-white/10"
+                }`}
+              ></span>
               {item.name}
             </>
           );
