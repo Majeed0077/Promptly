@@ -1,9 +1,90 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import Sidebar from "@/components/Sidebar";
 import AdminUserActions from "@/components/AdminUserActions";
+import SettingsSection from "@/components/admin/SettingsSection";
+import Toggle from "@/components/admin/Toggle";
+import Toast from "@/components/ui/Toast";
+
+type AdminSettings = {
+  general: {
+    appName: string;
+    defaultTheme: "dark" | "light";
+    defaultLanguage: "en" | "ur";
+  };
+  prompts: {
+    defaultStatus: "draft" | "published";
+    allowPublic: boolean;
+    allowCopy: boolean;
+    maxLength: number;
+    approvalRequired: boolean;
+  };
+  taxonomy: {
+    enableCategories: boolean;
+    enableTags: boolean;
+    maxTagsPerPrompt: number;
+  };
+  security: {
+    sessionExpiry: "24h" | "7d" | "30d";
+    loginAttemptLimit: number;
+    forceLogoutAll: boolean;
+    password: {
+      current: string;
+      next: string;
+      confirm: string;
+    };
+  };
+  billing: {
+    currentPlan: "Free" | "Pro" | "Enterprise";
+    promptLimit: number;
+    showUpgradeButton: boolean;
+  };
+  system: {
+    maintenanceMode: boolean;
+    debugMode: boolean;
+  };
+};
+
+const defaultSettings: AdminSettings = {
+  general: {
+    appName: "Promptly",
+    defaultTheme: "dark",
+    defaultLanguage: "en",
+  },
+  prompts: {
+    defaultStatus: "draft",
+    allowPublic: true,
+    allowCopy: true,
+    maxLength: 2000,
+    approvalRequired: false,
+  },
+  taxonomy: {
+    enableCategories: true,
+    enableTags: true,
+    maxTagsPerPrompt: 5,
+  },
+  security: {
+    sessionExpiry: "24h",
+    loginAttemptLimit: 5,
+    forceLogoutAll: false,
+    password: {
+      current: "",
+      next: "",
+      confirm: "",
+    },
+  },
+  billing: {
+    currentPlan: "Free",
+    promptLimit: 500,
+    showUpgradeButton: true,
+  },
+  system: {
+    maintenanceMode: false,
+    debugMode: false,
+  },
+};
 
 const adminNavItems = [
   { name: "Dashboard", active: false, href: "/admin" },
@@ -14,6 +95,88 @@ const adminNavItems = [
 ];
 
 export default function AdminSettingsPage() {
+  const [settings, setSettings] = useState<AdminSettings>(defaultSettings);
+  const [savedSettings, setSavedSettings] =
+    useState<AdminSettings>(defaultSettings);
+  const [toast, setToast] = useState<{
+    message: string;
+    variant: "success" | "error";
+  } | null>(null);
+  const hasUnsavedChanges = useMemo(
+    () => JSON.stringify(settings) !== JSON.stringify(savedSettings),
+    [settings, savedSettings]
+  );
+
+  useEffect(() => {
+    let isMounted = true;
+    const loadSettings = async () => {
+      try {
+        const response = await fetch("/api/admin/settings");
+        if (!response.ok) throw new Error("Failed");
+        const data = await response.json();
+        if (!isMounted) return;
+        setSettings(data.settings as AdminSettings);
+        setSavedSettings(data.settings as AdminSettings);
+      } catch {
+        if (!isMounted) return;
+        setToast({ message: "Failed to load settings", variant: "error" });
+      }
+    };
+    loadSettings();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const handleSave = async () => {
+    try {
+      const response = await fetch("/api/admin/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(settings),
+      });
+      if (!response.ok) throw new Error("Failed");
+      const data = await response.json();
+      setSavedSettings(data.settings as AdminSettings);
+      setToast({ message: "Settings saved", variant: "success" });
+    } catch {
+      setToast({ message: "Failed to save", variant: "error" });
+    }
+  };
+
+  const updateNested = <
+    K extends keyof AdminSettings,
+    F extends keyof AdminSettings[K],
+  >(
+    key: K,
+    field: F,
+    value: AdminSettings[K][F]
+  ) => {
+    setSettings((prev) => ({
+      ...prev,
+      [key]: {
+        ...prev[key],
+        [field]: value,
+      },
+    }));
+  };
+
+  const updatePasswordField = (
+    field: keyof AdminSettings["security"]["password"],
+    value: string
+  ) => {
+    setSettings((prev) => ({
+      ...prev,
+      security: {
+        ...prev.security,
+        password: {
+          ...prev.security.password,
+          [field]: value,
+        },
+      },
+    }));
+  };
+
   return (
     <div className="app-shell min-h-screen text-white">
       <Sidebar
@@ -46,19 +209,21 @@ export default function AdminSettingsPage() {
       <main className="min-h-screen lg:pl-[260px]">
         <div className="mx-auto max-w-6xl space-y-6 px-6 py-8">
           <div className="flex flex-wrap items-center justify-between gap-4">
-            <h1 className="text-2xl font-semibold">Settings</h1>
+            <div className="flex items-center gap-3">
+              <h1 className="text-2xl font-semibold">Settings</h1>
+              {hasUnsavedChanges && (
+                <span className="text-xs text-amber-200/80">
+                  Unsaved changes
+                </span>
+              )}
+            </div>
             <AdminUserActions />
           </div>
 
-          <section className="rounded-2xl border border-white/10 bg-[var(--card-bg)] p-6 backdrop-blur-xl shadow-[0_0_30px_rgba(20,30,60,0.35)]">
-            <div className="space-y-1">
-              <h3 className="text-lg font-semibold">General</h3>
-              <p className="text-sm text-white/60">
-                Configure the core appearance and defaults for your app.
-              </p>
-            </div>
-
-            <div className="mt-6 space-y-4">
+          <SettingsSection
+            title="General"
+            description="Configure the core appearance and defaults for your app."
+          >
               <div className="flex flex-col gap-3 border-b border-white/10 pb-4 md:flex-row md:items-center md:justify-between">
                 <div>
                   <p className="text-sm font-semibold">App Name</p>
@@ -66,7 +231,10 @@ export default function AdminSettingsPage() {
                 </div>
                 <input
                   type="text"
-                  defaultValue="Promptly"
+                  value={settings.general.appName}
+                  onChange={(event) =>
+                    updateNested("general", "appName", event.target.value)
+                  }
                   className="w-full max-w-sm rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white/90 focus:outline-none focus:ring-2 focus:ring-sky-500/40 focus:shadow-[0_0_0_1px_rgba(96,165,250,0.55),0_0_16px_rgba(96,165,250,0.25)] md:text-right"
                 />
               </div>
@@ -90,7 +258,17 @@ export default function AdminSettingsPage() {
                   <p className="text-sm font-semibold">Default Theme</p>
                   <p className="text-xs text-white/50">Initial UI mode.</p>
                 </div>
-                <select className="w-full max-w-sm rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white/90 focus:outline-none focus:ring-2 focus:ring-sky-500/40 focus:shadow-[0_0_0_1px_rgba(96,165,250,0.55),0_0_16px_rgba(96,165,250,0.25)] md:text-right">
+                <select
+                  value={settings.general.defaultTheme}
+                  onChange={(event) =>
+                    updateNested(
+                      "general",
+                      "defaultTheme",
+                      event.target.value as AdminSettings["general"]["defaultTheme"]
+                    )
+                  }
+                  className="w-full max-w-sm rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white/90 focus:outline-none focus:ring-2 focus:ring-sky-500/40 focus:shadow-[0_0_0_1px_rgba(96,165,250,0.55),0_0_16px_rgba(96,165,250,0.25)] md:text-right"
+                >
                   <option>dark</option>
                   <option>light</option>
                 </select>
@@ -101,29 +279,43 @@ export default function AdminSettingsPage() {
                   <p className="text-sm font-semibold">Default Language</p>
                   <p className="text-xs text-white/50">Locale for labels.</p>
                 </div>
-                <select className="w-full max-w-sm rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white/90 focus:outline-none focus:ring-2 focus:ring-sky-500/40 focus:shadow-[0_0_0_1px_rgba(96,165,250,0.55),0_0_16px_rgba(96,165,250,0.25)] md:text-right">
+                <select
+                  value={settings.general.defaultLanguage}
+                  onChange={(event) =>
+                    updateNested(
+                      "general",
+                      "defaultLanguage",
+                      event.target.value as AdminSettings["general"]["defaultLanguage"]
+                    )
+                  }
+                  className="w-full max-w-sm rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white/90 focus:outline-none focus:ring-2 focus:ring-sky-500/40 focus:shadow-[0_0_0_1px_rgba(96,165,250,0.55),0_0_16px_rgba(96,165,250,0.25)] md:text-right"
+                >
                   <option>en</option>
                   <option>ur</option>
                 </select>
               </div>
-            </div>
-          </section>
+          </SettingsSection>
 
-          <section className="rounded-2xl border border-white/10 bg-[var(--card-bg)] p-6 backdrop-blur-xl shadow-[0_0_30px_rgba(20,30,60,0.35)]">
-            <div className="space-y-1">
-              <h3 className="text-lg font-semibold">Prompt Settings</h3>
-              <p className="text-sm text-white/60">
-                Control default prompt behavior and permissions.
-              </p>
-            </div>
-
-            <div className="mt-6 space-y-4">
+          <SettingsSection
+            title="Prompt Settings"
+            description="Control default prompt behavior and permissions."
+          >
               <div className="flex flex-col gap-3 border-b border-white/10 pb-4 md:flex-row md:items-center md:justify-between">
                 <div>
                   <p className="text-sm font-semibold">Default Prompt Status</p>
                   <p className="text-xs text-white/50">Applied on creation.</p>
                 </div>
-                <select className="w-full max-w-sm rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white/90 focus:outline-none focus:ring-2 focus:ring-sky-500/40 focus:shadow-[0_0_0_1px_rgba(96,165,250,0.55),0_0_16px_rgba(96,165,250,0.25)] md:text-right">
+                <select
+                  value={settings.prompts.defaultStatus}
+                  onChange={(event) =>
+                    updateNested(
+                      "prompts",
+                      "defaultStatus",
+                      event.target.value as AdminSettings["prompts"]["defaultStatus"]
+                    )
+                  }
+                  className="w-full max-w-sm rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white/90 focus:outline-none focus:ring-2 focus:ring-sky-500/40 focus:shadow-[0_0_0_1px_rgba(96,165,250,0.55),0_0_16px_rgba(96,165,250,0.25)] md:text-right"
+                >
                   <option>draft</option>
                   <option>published</option>
                 </select>
@@ -134,7 +326,10 @@ export default function AdminSettingsPage() {
                   <p className="text-sm font-semibold">Allow Public Prompts</p>
                   <p className="text-xs text-white/50">Public visibility toggle.</p>
                 </div>
-                <Toggle defaultChecked />
+                <Toggle
+                  checked={settings.prompts.allowPublic}
+                  onChange={(value) => updateNested("prompts", "allowPublic", value)}
+                />
               </div>
 
               <div className="flex flex-col gap-3 border-b border-white/10 pb-4 md:flex-row md:items-center md:justify-between">
@@ -142,7 +337,10 @@ export default function AdminSettingsPage() {
                   <p className="text-sm font-semibold">Allow Copy</p>
                   <p className="text-xs text-white/50">Enable copy button.</p>
                 </div>
-                <Toggle defaultChecked />
+                <Toggle
+                  checked={settings.prompts.allowCopy}
+                  onChange={(value) => updateNested("prompts", "allowCopy", value)}
+                />
               </div>
 
               <div className="flex flex-col gap-3 border-b border-white/10 pb-4 md:flex-row md:items-center md:justify-between">
@@ -152,7 +350,14 @@ export default function AdminSettingsPage() {
                 </div>
                 <input
                   type="number"
-                  defaultValue={2000}
+                  value={settings.prompts.maxLength}
+                  onChange={(event) =>
+                    updateNested(
+                      "prompts",
+                      "maxLength",
+                      Number(event.target.value)
+                    )
+                  }
                   className="w-full max-w-sm rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white/90 focus:outline-none focus:ring-2 focus:ring-sky-500/40 focus:shadow-[0_0_0_1px_rgba(96,165,250,0.55),0_0_16px_rgba(96,165,250,0.25)] md:text-right"
                 />
               </div>
@@ -162,26 +367,30 @@ export default function AdminSettingsPage() {
                   <p className="text-sm font-semibold">Prompt Approval Required</p>
                   <p className="text-xs text-white/50">Manual review before publish.</p>
                 </div>
-                <Toggle />
+                <Toggle
+                  checked={settings.prompts.approvalRequired}
+                  onChange={(value) =>
+                    updateNested("prompts", "approvalRequired", value)
+                  }
+                />
               </div>
-            </div>
-          </section>
+          </SettingsSection>
 
-          <section className="rounded-2xl border border-white/10 bg-[var(--card-bg)] p-6 backdrop-blur-xl shadow-[0_0_30px_rgba(20,30,60,0.35)]">
-            <div className="space-y-1">
-              <h3 className="text-lg font-semibold">Categories & Tags</h3>
-              <p className="text-sm text-white/60">
-                Choose how prompts are classified and organized.
-              </p>
-            </div>
-
-            <div className="mt-6 space-y-4">
+          <SettingsSection
+            title="Categories & Tags"
+            description="Choose how prompts are classified and organized."
+          >
               <div className="flex flex-col gap-3 border-b border-white/10 pb-4 md:flex-row md:items-center md:justify-between">
                 <div>
                   <p className="text-sm font-semibold">Enable Categories</p>
                   <p className="text-xs text-white/50">Use category grouping.</p>
                 </div>
-                <Toggle defaultChecked />
+                <Toggle
+                  checked={settings.taxonomy.enableCategories}
+                  onChange={(value) =>
+                    updateNested("taxonomy", "enableCategories", value)
+                  }
+                />
               </div>
 
               <div className="flex flex-col gap-3 border-b border-white/10 pb-4 md:flex-row md:items-center md:justify-between">
@@ -189,7 +398,10 @@ export default function AdminSettingsPage() {
                   <p className="text-sm font-semibold">Enable Tags</p>
                   <p className="text-xs text-white/50">Tag-based filtering.</p>
                 </div>
-                <Toggle defaultChecked />
+                <Toggle
+                  checked={settings.taxonomy.enableTags}
+                  onChange={(value) => updateNested("taxonomy", "enableTags", value)}
+                />
               </div>
 
               <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
@@ -199,28 +411,44 @@ export default function AdminSettingsPage() {
                 </div>
                 <input
                   type="number"
-                  defaultValue={5}
+                  value={settings.taxonomy.maxTagsPerPrompt}
+                  onChange={(event) =>
+                    updateNested(
+                      "taxonomy",
+                      "maxTagsPerPrompt",
+                      Number(event.target.value)
+                    )
+                  }
                   className="w-full max-w-sm rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white/90 focus:outline-none focus:ring-2 focus:ring-sky-500/40 focus:shadow-[0_0_0_1px_rgba(96,165,250,0.55),0_0_16px_rgba(96,165,250,0.25)] md:text-right"
                 />
               </div>
-            </div>
-          </section>
+          </SettingsSection>
 
-          <section className="rounded-2xl border border-white/10 bg-[var(--card-bg)] p-6 backdrop-blur-xl shadow-[0_0_30px_rgba(20,30,60,0.35)]">
-            <div className="space-y-1">
-              <h3 className="text-lg font-semibold">Security</h3>
-              <p className="text-sm text-white/60">
-                Manage session controls and account protection.
-              </p>
-            </div>
-
-            <div className="mt-6 space-y-4">
+          <SettingsSection
+            title="Security"
+            description="Manage session controls and account protection."
+            actions={
+              <button className="rounded-xl bg-gradient-to-r from-sky-500/80 to-indigo-500/80 px-4 py-2 text-xs font-semibold text-white shadow-[0_0_18px_rgba(120,160,255,0.6)] transition hover:-translate-y-0.5 hover:brightness-110">
+                Save changes
+              </button>
+            }
+          >
               <div className="flex flex-col gap-3 border-b border-white/10 pb-4 md:flex-row md:items-center md:justify-between">
                 <div>
                   <p className="text-sm font-semibold">Session Expiry</p>
                   <p className="text-xs text-white/50">Auto logout timing.</p>
                 </div>
-                <select className="w-full max-w-sm rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white/90 focus:outline-none focus:ring-2 focus:ring-sky-500/40 focus:shadow-[0_0_0_1px_rgba(96,165,250,0.55),0_0_16px_rgba(96,165,250,0.25)] md:text-right">
+                <select
+                  value={settings.security.sessionExpiry}
+                  onChange={(event) =>
+                    updateNested(
+                      "security",
+                      "sessionExpiry",
+                      event.target.value as AdminSettings["security"]["sessionExpiry"]
+                    )
+                  }
+                  className="w-full max-w-sm rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white/90 focus:outline-none focus:ring-2 focus:ring-sky-500/40 focus:shadow-[0_0_0_1px_rgba(96,165,250,0.55),0_0_16px_rgba(96,165,250,0.25)] md:text-right"
+                >
                   <option>24h</option>
                   <option>7d</option>
                   <option>30d</option>
@@ -234,7 +462,14 @@ export default function AdminSettingsPage() {
                 </div>
                 <input
                   type="number"
-                  defaultValue={5}
+                  value={settings.security.loginAttemptLimit}
+                  onChange={(event) =>
+                    updateNested(
+                      "security",
+                      "loginAttemptLimit",
+                      Number(event.target.value)
+                    )
+                  }
                   className="w-full max-w-sm rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white/90 focus:outline-none focus:ring-2 focus:ring-sky-500/40 focus:shadow-[0_0_0_1px_rgba(96,165,250,0.55),0_0_16px_rgba(96,165,250,0.25)] md:text-right"
                 />
               </div>
@@ -247,16 +482,28 @@ export default function AdminSettingsPage() {
                   <input
                     type="password"
                     placeholder="Current password"
+                    value={settings.security.password.current}
+                    onChange={(event) =>
+                      updatePasswordField("current", event.target.value)
+                    }
                     className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white/90 focus:outline-none focus:ring-2 focus:ring-sky-500/40 focus:shadow-[0_0_0_1px_rgba(96,165,250,0.55),0_0_16px_rgba(96,165,250,0.25)]"
                   />
                   <input
                     type="password"
                     placeholder="New password"
+                    value={settings.security.password.next}
+                    onChange={(event) =>
+                      updatePasswordField("next", event.target.value)
+                    }
                     className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white/90 focus:outline-none focus:ring-2 focus:ring-sky-500/40 focus:shadow-[0_0_0_1px_rgba(96,165,250,0.55),0_0_16px_rgba(96,165,250,0.25)]"
                   />
                   <input
                     type="password"
                     placeholder="Confirm new password"
+                    value={settings.security.password.confirm}
+                    onChange={(event) =>
+                      updatePasswordField("confirm", event.target.value)
+                    }
                     className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white/90 focus:outline-none focus:ring-2 focus:ring-sky-500/40 focus:shadow-[0_0_0_1px_rgba(96,165,250,0.55),0_0_16px_rgba(96,165,250,0.25)]"
                   />
                 </div>
@@ -271,24 +518,12 @@ export default function AdminSettingsPage() {
                   Force Logout
                 </button>
               </div>
-            </div>
+          </SettingsSection>
 
-            <div className="mt-6 flex justify-end">
-              <button className="rounded-xl bg-gradient-to-r from-sky-500/80 to-indigo-500/80 px-4 py-2 text-xs font-semibold text-white shadow-[0_0_18px_rgba(120,160,255,0.6)] transition hover:-translate-y-0.5 hover:brightness-110">
-                Save changes
-              </button>
-            </div>
-          </section>
-
-          <section className="rounded-2xl border border-white/10 bg-[var(--card-bg)] p-6 backdrop-blur-xl shadow-[0_0_30px_rgba(20,30,60,0.35)]">
-            <div className="space-y-1">
-              <h3 className="text-lg font-semibold">Billing</h3>
-              <p className="text-sm text-white/60">
-                Review your plan and usage limits.
-              </p>
-            </div>
-
-            <div className="mt-6 space-y-4">
+          <SettingsSection
+            title="Billing"
+            description="Review your plan and usage limits."
+          >
               <div className="flex flex-col gap-3 border-b border-white/10 pb-4 md:flex-row md:items-center md:justify-between">
                 <div>
                   <p className="text-sm font-semibold">Current Plan</p>
@@ -306,7 +541,14 @@ export default function AdminSettingsPage() {
                 </div>
                 <input
                   type="number"
-                  defaultValue={500}
+                  value={settings.billing.promptLimit}
+                  onChange={(event) =>
+                    updateNested(
+                      "billing",
+                      "promptLimit",
+                      Number(event.target.value)
+                    )
+                  }
                   className="w-full max-w-sm rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white/90 focus:outline-none focus:ring-2 focus:ring-sky-500/40 focus:shadow-[0_0_0_1px_rgba(96,165,250,0.55),0_0_16px_rgba(96,165,250,0.25)] md:text-right"
                 />
               </div>
@@ -316,26 +558,30 @@ export default function AdminSettingsPage() {
                   <p className="text-sm font-semibold">Show Upgrade Button</p>
                   <p className="text-xs text-white/50">Display CTA in UI.</p>
                 </div>
-                <Toggle defaultChecked />
+                <Toggle
+                  checked={settings.billing.showUpgradeButton}
+                  onChange={(value) =>
+                    updateNested("billing", "showUpgradeButton", value)
+                  }
+                />
               </div>
-            </div>
-          </section>
+          </SettingsSection>
 
-          <section className="rounded-2xl border border-white/10 bg-[var(--card-bg)] p-6 backdrop-blur-xl shadow-[0_0_30px_rgba(20,30,60,0.35)]">
-            <div className="space-y-1">
-              <h3 className="text-lg font-semibold">System</h3>
-              <p className="text-sm text-white/60">
-                Administrative tools for system management.
-              </p>
-            </div>
-
-            <div className="mt-6 space-y-4">
+          <SettingsSection
+            title="System"
+            description="Administrative tools for system management."
+          >
               <div className="flex flex-col gap-3 border-b border-white/10 pb-4 md:flex-row md:items-center md:justify-between">
                 <div>
                   <p className="text-sm font-semibold">Maintenance Mode</p>
                   <p className="text-xs text-white/50">Restrict user access.</p>
                 </div>
-                <Toggle />
+                <Toggle
+                  checked={settings.system.maintenanceMode}
+                  onChange={(value) =>
+                    updateNested("system", "maintenanceMode", value)
+                  }
+                />
               </div>
 
               <div className="flex flex-col gap-3 border-b border-white/10 pb-4 md:flex-row md:items-center md:justify-between">
@@ -343,7 +589,10 @@ export default function AdminSettingsPage() {
                   <p className="text-sm font-semibold">Debug Mode</p>
                   <p className="text-xs text-white/50">Enable verbose logs.</p>
                 </div>
-                <Toggle />
+                <Toggle
+                  checked={settings.system.debugMode}
+                  onChange={(value) => updateNested("system", "debugMode", value)}
+                />
               </div>
 
               <div className="flex flex-col gap-3 border-b border-white/10 pb-4 md:flex-row md:items-center md:justify-between">
@@ -371,26 +620,26 @@ export default function AdminSettingsPage() {
                   </button>
                 </div>
               </div>
-            </div>
-          </section>
+          </SettingsSection>
 
           <div className="flex justify-end">
-            <button className="rounded-xl bg-gradient-to-r from-sky-500/80 to-indigo-500/80 px-4 py-2 text-xs font-semibold text-white shadow-[0_0_18px_rgba(120,160,255,0.6)] transition hover:-translate-y-0.5 hover:brightness-110">
+            <button
+              onClick={handleSave}
+              className="rounded-xl bg-gradient-to-r from-sky-500/80 to-indigo-500/80 px-4 py-2 text-xs font-semibold text-white shadow-[0_0_18px_rgba(120,160,255,0.6)] transition hover:-translate-y-0.5 hover:brightness-110"
+            >
               Save All Changes
             </button>
           </div>
         </div>
       </main>
-    </div>
-  );
-}
 
-function Toggle({ defaultChecked = false }: { defaultChecked?: boolean }) {
-  return (
-    <label className="relative inline-flex items-center">
-      <input type="checkbox" defaultChecked={defaultChecked} className="peer sr-only" />
-      <span className="h-6 w-11 rounded-full border border-white/10 bg-white/10 transition peer-checked:border-sky-400/40 peer-checked:bg-sky-500/30 peer-checked:shadow-[0_0_12px_rgba(96,165,250,0.45)]"></span>
-      <span className="absolute left-1 top-1 h-4 w-4 rounded-full bg-white/60 transition peer-checked:translate-x-5 peer-checked:bg-white peer-checked:shadow-[0_0_10px_rgba(96,165,250,0.6)]"></span>
-    </label>
+      {toast && (
+        <Toast
+          message={toast.message}
+          variant={toast.variant}
+          onClose={() => setToast(null)}
+        />
+      )}
+    </div>
   );
 }

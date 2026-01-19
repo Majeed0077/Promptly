@@ -105,7 +105,7 @@ export default function SignInPage() {
                     ? "border-rose-400/60 shadow-[0_0_16px_rgba(244,63,94,0.35)]"
                     : "border-white/10"
                 }`}
-                placeholder="••••••••"
+                placeholder="********"
                 required
                 autoComplete="current-password"
               />
@@ -174,3 +174,4 @@ function Spinner({ className }: { className?: string }) {
     </svg>
   );
 }
+
