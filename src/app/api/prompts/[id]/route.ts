@@ -4,8 +4,9 @@ import { PromptModel } from "@/models/Prompt";
 
 export async function PATCH(
   request: Request,
-  { params }: { params: { id: string } }
+  context: { params: { id: string } | Promise<{ id: string }> }
 ) {
+  const params = await context.params;
   await dbConnect();
   const body = await request.json();
   let prompt = null;
@@ -34,8 +35,9 @@ export async function PATCH(
 
 export async function DELETE(
   _request: Request,
-  { params }: { params: { id: string } }
+  context: { params: { id: string } | Promise<{ id: string }> }
 ) {
+  const params = await context.params;
   await dbConnect();
   let prompt = null;
   try {

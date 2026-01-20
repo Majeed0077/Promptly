@@ -57,7 +57,7 @@ export async function POST(request: Request) {
     const favorites = await FavoritesModel.findOne({ key });
     const current = favorites?.promptIds ?? [];
     const next = current.includes(promptId)
-      ? current.filter((id) => id !== promptId)
+      ? current.filter((id: string) => id !== promptId)
       : [...current, promptId];
 
     const updated = await FavoritesModel.findOneAndUpdate(
