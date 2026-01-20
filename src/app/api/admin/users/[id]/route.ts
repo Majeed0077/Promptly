@@ -4,8 +4,9 @@ import { UserModel } from "@/models/User";
 
 export async function PUT(
   request: Request,
-  { params }: { params: { id: string } }
+  context: { params: { id: string } | Promise<{ id: string }> }
 ) {
+  const params = await context.params;
   await dbConnect();
   const body = await request.json();
   const user = await UserModel.findByIdAndUpdate(
@@ -24,8 +25,9 @@ export async function PUT(
 
 export async function DELETE(
   _request: Request,
-  { params }: { params: { id: string } }
+  context: { params: { id: string } | Promise<{ id: string }> }
 ) {
+  const params = await context.params;
   await dbConnect();
   await UserModel.findByIdAndDelete(params.id);
   return NextResponse.json({ ok: true });
