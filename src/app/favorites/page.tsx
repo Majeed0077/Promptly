@@ -6,21 +6,69 @@ import Sidebar from "@/components/Sidebar";
 import AuthActions from "@/components/AuthActions";
 import PromptGrid from "@/components/PromptGrid";
 import { PromptItem } from "@/components/PromptCard";
-import { prompts } from "@/data/prompts";
-import { loadFavorites, saveFavorites } from "@/lib/favorites";
 
 export default function FavoritesPage() {
+  const [prompts, setPrompts] = useState<PromptItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
   const [toast, setToast] = useState<string | null>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    setFavoriteIds(loadFavorites());
+    let isMounted = true;
+    const loadData = async () => {
+      try {
+        const promptRes = await fetch("/api/prompts");
+        if (promptRes.ok) {
+          const promptData = await promptRes.json();
+          if (!isMounted) return;
+          const mapped = (promptData.prompts as Array<any>).map((prompt) => ({
+            ...prompt,
+            id: String(prompt.id ?? prompt._id),
+          })) as PromptItem[];
+          setPrompts(mapped);
+        } else if (isMounted) {
+          setToast("Failed to load prompts");
+        }
+      } catch {
+        if (isMounted) setToast("Failed to load prompts");
+      } finally {
+        if (isMounted) setIsLoading(false);
+      }
+
+      try {
+        const favRes = await fetch("/api/favorites");
+        if (favRes.ok) {
+          const favData = await favRes.json();
+          if (!isMounted) return;
+          setFavoriteIds(favData.ids as string[]);
+        } else if (isMounted) {
+          setToast("Failed to load favorites");
+        }
+      } catch {
+        if (isMounted) setToast("Failed to load favorites");
+      }
+    };
+
+    const handleRefresh = () => {
+      if (document.visibilityState === "visible") {
+        loadData();
+      }
+    };
+
+    loadData();
+    window.addEventListener("focus", handleRefresh);
+    document.addEventListener("visibilitychange", handleRefresh);
+    return () => {
+      isMounted = false;
+      window.removeEventListener("focus", handleRefresh);
+      document.removeEventListener("visibilitychange", handleRefresh);
+    };
   }, []);
 
   const favoritePrompts = useMemo(() => {
     return prompts.filter((prompt) => favoriteIds.includes(prompt.id));
-  }, [favoriteIds]);
+  }, [favoriteIds, prompts]);
 
   const handleCopy = async (prompt: PromptItem) => {
     try {
@@ -36,21 +84,36 @@ export default function FavoritesPage() {
     timeoutRef.current = setTimeout(() => setToast(null), 1600);
   };
 
-  const handleToggleFavorite = (prompt: PromptItem) => {
-    setFavoriteIds((prev) => {
-      const next = prev.includes(prompt.id)
-        ? prev.filter((id) => id !== prompt.id)
-        : [...prev, prompt.id];
-      saveFavorites(next);
-      setToast(
-        prev.includes(prompt.id) ? "Removed from Favorites" : "Saved to Favorites"
-      );
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
+  const handleToggleFavorite = async (prompt: PromptItem) => {
+    const previous = favoriteIds;
+    const isFavorite = previous.includes(prompt.id);
+    const next = isFavorite
+      ? previous.filter((id) => id !== prompt.id)
+      : [...previous, prompt.id];
+    setFavoriteIds(next);
+    setToast(isFavorite ? "Removed from Favorites" : "Saved to Favorites");
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+    timeoutRef.current = setTimeout(() => setToast(null), 1600);
+
+    try {
+      const res = await fetch("/api/favorites", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ promptId: prompt.id }),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok) {
+        throw new Error(data?.message ?? "Failed to update favorites");
       }
-      timeoutRef.current = setTimeout(() => setToast(null), 1600);
-      return next;
-    });
+      setFavoriteIds((data?.ids as string[]) ?? next);
+    } catch (error) {
+      setFavoriteIds(previous);
+      setToast(
+        error instanceof Error ? error.message : "Failed to update favorites"
+      );
+    }
   };
 
   return (
@@ -91,6 +154,9 @@ export default function FavoritesPage() {
               favoriteIds={favoriteIds}
               onToggleFavorite={handleToggleFavorite}
             />
+          )}
+          {isLoading && (
+            <p className="text-sm text-white/60">Loading prompts...</p>
           )}
         </div>
       </main>

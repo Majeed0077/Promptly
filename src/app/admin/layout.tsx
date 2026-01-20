@@ -10,7 +10,7 @@ export default async function AdminLayout({
 }) {
   const cookieStore = await cookies();
   const token = cookieStore.get("admin_session")?.value ?? "";
-  const payload = token ? verifySessionToken(token) : null;
+  const payload = token ? await verifySessionToken(token) : null;
 
   if (!payload) {
     redirect("/signin?next=/admin");

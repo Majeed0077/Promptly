@@ -1,49 +1,32 @@
 import { NextResponse } from "next/server";
+import { dbConnect } from "@/lib/db";
+import { SettingsModel } from "@/models/Settings";
+import { defaultSettings } from "@/data/adminSettings";
 
-const defaultSettings = {
-  general: {
-    appName: "Promptly",
-    defaultTheme: "dark",
-    defaultLanguage: "en",
-  },
-  prompts: {
-    defaultStatus: "draft",
-    allowPublic: true,
-    allowCopy: true,
-    maxLength: 2000,
-    approvalRequired: false,
-  },
-  taxonomy: {
-    enableCategories: true,
-    enableTags: true,
-    maxTagsPerPrompt: 5,
-  },
-  security: {
-    sessionExpiry: "24h",
-    loginAttemptLimit: 5,
-    forceLogoutAll: false,
-    password: {
-      current: "",
-      next: "",
-      confirm: "",
-    },
-  },
-  billing: {
-    currentPlan: "Free",
-    promptLimit: 500,
-    showUpgradeButton: true,
-  },
-  system: {
-    maintenanceMode: false,
-    debugMode: false,
-  },
-};
+const SETTINGS_KEY = "default";
 
 export async function GET() {
-  return NextResponse.json({ ok: true, settings: defaultSettings });
+  await dbConnect();
+  let settings = await SettingsModel.findOne({ key: SETTINGS_KEY }).lean();
+
+  if (!settings) {
+    settings = await SettingsModel.create({
+      key: SETTINGS_KEY,
+      data: defaultSettings,
+    });
+  }
+
+  return NextResponse.json({ ok: true, settings: settings.data });
 }
 
 export async function POST(request: Request) {
-  const settings = await request.json();
-  return NextResponse.json({ ok: true, settings });
+  await dbConnect();
+  const data = await request.json();
+  const settings = await SettingsModel.findOneAndUpdate(
+    { key: SETTINGS_KEY },
+    { data },
+    { new: true, upsert: true }
+  ).lean();
+
+  return NextResponse.json({ ok: true, settings: settings?.data ?? data });
 }

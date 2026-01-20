@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import Sidebar from "@/components/Sidebar";
 import AdminUserActions from "@/components/AdminUserActions";
@@ -13,25 +13,66 @@ const adminNavItems = [
   { name: "Settings", active: false, href: "/admin/settings" },
 ];
 
-const summaryCards = [
-  {
-    label: "Total Prompts",
-    value: "128",
-    glow: "shadow-[0_0_30px_rgba(94,141,255,0.35)] border-t-2 border-t-[var(--glow-blue)]",
-  },
-  {
-    label: "Categories",
-    value: "12",
-    glow: "shadow-[0_0_30px_rgba(161,106,255,0.35)] border-t-2 border-t-[var(--glow-purple)]",
-  },
-  {
-    label: "Last Updated",
-    value: "2 hours ago",
-    glow: "shadow-[0_0_30px_rgba(112,255,204,0.3)] border-t-2 border-t-[var(--glow-green)]",
-  },
-];
+type PromptSummary = {
+  total: number;
+  categories: number;
+  lastUpdated: string;
+};
 
 export default function AdminDashboardPage() {
+  const [summary, setSummary] = useState<PromptSummary>({
+    total: 0,
+    categories: 0,
+    lastUpdated: "—",
+  });
+
+  useEffect(() => {
+    let isMounted = true;
+    const loadSummary = async () => {
+      try {
+        const response = await fetch("/api/prompts");
+        if (!response.ok) throw new Error("Failed");
+        const data = await response.json();
+        if (!isMounted) return;
+        const prompts = (data.prompts as Array<any>) ?? [];
+        const total = prompts.length;
+        const categories = new Set(
+          prompts.map((prompt) => String(prompt.category ?? "").trim())
+        ).size;
+        const lastUpdated = getLastUpdatedLabel(prompts);
+        setSummary({ total, categories, lastUpdated });
+      } catch {
+        if (!isMounted) return;
+        setSummary({ total: 0, categories: 0, lastUpdated: "—" });
+      }
+    };
+    loadSummary();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const summaryCards = useMemo(
+    () => [
+      {
+        label: "Total Prompts",
+        value: String(summary.total),
+        glow: "shadow-[0_0_30px_rgba(94,141,255,0.35)] border-t-2 border-t-[var(--glow-blue)]",
+      },
+      {
+        label: "Categories",
+        value: String(summary.categories),
+        glow: "shadow-[0_0_30px_rgba(161,106,255,0.35)] border-t-2 border-t-[var(--glow-purple)]",
+      },
+      {
+        label: "Last Updated",
+        value: summary.lastUpdated,
+        glow: "shadow-[0_0_30px_rgba(112,255,204,0.3)] border-t-2 border-t-[var(--glow-green)]",
+      },
+    ],
+    [summary]
+  );
+
   return (
     <div className="app-shell min-h-screen text-white">
       <Sidebar
@@ -88,4 +129,21 @@ export default function AdminDashboardPage() {
       </main>
     </div>
   );
+}
+
+function getLastUpdatedLabel(prompts: Array<any>) {
+  if (!prompts.length) return "—";
+  const timestamps = prompts
+    .map((prompt) => new Date(prompt.updatedAt ?? prompt.createdAt ?? 0).getTime())
+    .filter((value) => Number.isFinite(value));
+  if (!timestamps.length) return "—";
+  const latest = Math.max(...timestamps);
+  const diffMs = Date.now() - latest;
+  if (diffMs < 60_000) return "Just now";
+  const minutes = Math.floor(diffMs / 60_000);
+  if (minutes < 60) return `${minutes} min ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours} hour${hours === 1 ? "" : "s"} ago`;
+  const days = Math.floor(hours / 24);
+  return `${days} day${days === 1 ? "" : "s"} ago`;
 }

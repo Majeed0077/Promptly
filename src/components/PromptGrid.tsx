@@ -8,6 +8,7 @@ type PromptGridProps = {
   onCopy: (prompt: PromptItem) => void;
   favoriteIds: string[];
   onToggleFavorite: (prompt: PromptItem) => void;
+  view?: "grid" | "list";
 };
 
 const glowVariants = [
@@ -21,14 +22,24 @@ export default function PromptGrid({
   onCopy,
   favoriteIds,
   onToggleFavorite,
+  view = "grid",
 }: PromptGridProps) {
+  const isList = view === "list";
   return (
-    <div className="grid auto-rows-fr grid-cols-1 gap-6 md:grid-cols-2 lg:gap-8 xl:grid-cols-3">
+    <div
+      className={
+        isList
+          ? "grid grid-cols-1 gap-4"
+          : "grid auto-rows-fr grid-cols-1 gap-6 md:grid-cols-2 lg:gap-8 xl:grid-cols-3"
+      }
+    >
       {prompts.map((prompt, index) => (
         <PromptCard
           key={prompt.id}
           prompt={prompt}
-          glowClass={glowVariants[index % glowVariants.length]}
+          glowClass={
+            isList ? "border border-white/10 shadow-none" : glowVariants[index % glowVariants.length]
+          }
           onCopy={onCopy}
           isFavorite={favoriteIds.includes(prompt.id)}
           onToggleFavorite={onToggleFavorite}

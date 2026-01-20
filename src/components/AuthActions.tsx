@@ -20,8 +20,12 @@ export default function AuthActions() {
   useEffect(() => {
     let isMounted = true;
     const loadSession = async () => {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 4000);
       try {
-        const response = await fetch("/api/auth/session");
+        const response = await fetch("/api/auth/session", {
+          signal: controller.signal,
+        });
         if (!response.ok) {
           throw new Error("unauthenticated");
         }
@@ -31,6 +35,8 @@ export default function AuthActions() {
       } catch {
         if (!isMounted) return;
         setSession({ status: "unauthenticated" });
+      } finally {
+        clearTimeout(timeoutId);
       }
     };
     loadSession();

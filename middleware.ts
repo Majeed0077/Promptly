@@ -71,8 +71,9 @@ async function verifySessionToken(token: string, secret: string) {
     const payload = JSON.parse(payloadJson) as {
       email?: string;
       issuedAt?: number;
+      sessionId?: string;
     };
-    return Boolean(payload?.email && payload?.issuedAt);
+    return Boolean(payload?.email && payload?.issuedAt && payload?.sessionId);
   } catch {
     return false;
   }

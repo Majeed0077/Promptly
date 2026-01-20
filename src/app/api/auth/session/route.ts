@@ -13,7 +13,7 @@ export async function GET(request: Request) {
   }
 
   const token = decodeURIComponent(match.replace("admin_session=", ""));
-  const payload = verifySessionToken(token);
+  const payload = await verifySessionToken(token);
 
   if (!payload) {
     return NextResponse.json({ ok: false }, { status: 401 });

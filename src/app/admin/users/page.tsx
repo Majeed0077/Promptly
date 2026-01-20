@@ -55,7 +55,13 @@ export default function AdminUsersPage() {
         if (!response.ok) throw new Error("Failed");
         const data = await response.json();
         if (!isMounted) return;
-        setUsers(data.users as User[]);
+        const mapped = (data.users as Array<any>).map((user) => ({
+          ...user,
+          id: String(user.id ?? user._id),
+          lastLoginAt: user.lastLoginAt ? String(user.lastLoginAt) : "",
+          createdAt: user.createdAt ? String(user.createdAt) : "",
+        })) as User[];
+        setUsers(mapped);
       } catch {
         if (!isMounted) return;
         setToast({ message: "Failed to load users", variant: "error" });
@@ -104,7 +110,13 @@ export default function AdminUsersPage() {
       });
       if (!response.ok) throw new Error("Failed");
       const data = await response.json();
-      setUsers((prev) => [data.user as User, ...prev]);
+      const created = {
+        ...(data.user as User),
+        id: String(data.user?.id ?? data.user?._id),
+        lastLoginAt: data.user?.lastLoginAt ? String(data.user.lastLoginAt) : "",
+        createdAt: data.user?.createdAt ? String(data.user.createdAt) : "",
+      };
+      setUsers((prev) => [created, ...prev]);
       setActiveUser(null);
       setToast({ message: "User created", variant: "success" });
     } catch {
@@ -124,8 +136,14 @@ export default function AdminUsersPage() {
       });
       if (!response.ok) throw new Error("Failed");
       const data = await response.json();
+      const updated = {
+        ...(data.user as User),
+        id: String(data.user?.id ?? data.user?._id ?? form.id),
+        lastLoginAt: data.user?.lastLoginAt ? String(data.user.lastLoginAt) : "",
+        createdAt: data.user?.createdAt ? String(data.user.createdAt) : "",
+      };
       setUsers((prev) =>
-        prev.map((user) => (user.id === form.id ? data.user : user))
+        prev.map((user) => (user.id === form.id ? updated : user))
       );
       setActiveUser(null);
       setToast({ message: "User updated", variant: "success" });

@@ -1,11 +1,13 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import Sidebar from "@/components/Sidebar";
 import Topbar from "@/components/Topbar";
 import AdminPromptTable, { AdminPrompt } from "@/components/AdminPromptTable";
-import AdminPromptModal from "@/components/AdminPromptModal";
+import AdminPromptModal, {
+  AdminPromptFormValues,
+} from "@/components/AdminPromptModal";
 import AdminUserActions from "@/components/AdminUserActions";
 
 const adminNavItems = [
@@ -16,53 +18,108 @@ const adminNavItems = [
   { name: "Settings", active: false, href: "/admin/settings" },
 ];
 
-const adminPrompts: AdminPrompt[] = [
-  {
-    id: "admin-1",
-    title: "Blog Post Generator",
-    category: "AI Writing",
-    tags: ["Content"],
-    status: "Active",
-  },
-  {
-    id: "admin-2",
-    title: "Social Media Ad Copy",
-    category: "Marketing",
-    tags: ["Ads"],
-    status: "Draft",
-  },
-  {
-    id: "admin-3",
-    title: "Productivity Tips",
-    category: "Productivity",
-    tags: ["Tips"],
-    status: "Active",
-  },
-  {
-    id: "admin-4",
-    title: "Creative Story Idea",
-    category: "Creative",
-    tags: ["Storytelling"],
-    status: "Inactive",
-  },
-];
-
 const statusOptions = ["All", "Active", "Draft", "Inactive"];
 
 export default function AdminPromptsPage() {
+  const [prompts, setPrompts] = useState<AdminPrompt[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingPrompt, setEditingPrompt] = useState<AdminPrompt | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+    const loadPrompts = async () => {
+      try {
+        const response = await fetch("/api/prompts");
+        if (!response.ok) throw new Error("Failed");
+        const data = await response.json();
+        if (!isMounted) return;
+        const mapped = (data.prompts as Array<any>).map((prompt) =>
+          mapPrompt(prompt)
+        ) as AdminPrompt[];
+        setPrompts(mapped);
+      } catch {
+        if (!isMounted) return;
+        setPrompts([]);
+      }
+    };
+    loadPrompts();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const filteredPrompts = useMemo(() => {
     const query = searchQuery.toLowerCase();
-    return adminPrompts.filter((prompt) => {
+    return prompts.filter((prompt) => {
       const matchesSearch = prompt.title.toLowerCase().includes(query);
       const matchesStatus =
         statusFilter === "All" || prompt.status === statusFilter;
       return matchesSearch && matchesStatus;
     });
-  }, [searchQuery, statusFilter]);
+  }, [prompts, searchQuery, statusFilter]);
+
+  const handleOpenCreate = () => {
+    setEditingPrompt(null);
+    setIsModalOpen(true);
+  };
+
+  const handleOpenEdit = (prompt: AdminPrompt) => {
+    setEditingPrompt(prompt);
+    setIsModalOpen(true);
+  };
+
+  const handleSave = async (values: AdminPromptFormValues) => {
+    setIsSaving(true);
+    try {
+      const response = await fetch(
+        editingPrompt ? `/api/prompts/${editingPrompt.id}` : "/api/prompts",
+        {
+          method: editingPrompt ? "PATCH" : "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(values),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Save failed");
+      }
+
+      const data = await response.json();
+      const mapped = mapPrompt(data.prompt ?? values);
+
+      setPrompts((current) => {
+        if (!editingPrompt) {
+          return [mapped, ...current];
+        }
+        return current.map((prompt) =>
+          prompt.id === editingPrompt.id ? mapped : prompt
+        );
+      });
+      setIsModalOpen(false);
+      setEditingPrompt(null);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDelete = async (prompt: AdminPrompt) => {
+    const confirmed = window.confirm(
+      `Delete "${prompt.title}"? This cannot be undone.`
+    );
+    if (!confirmed) return;
+
+    const response = await fetch(`/api/prompts/${prompt.id}`, {
+      method: "DELETE",
+    });
+
+    if (!response.ok) return;
+    setPrompts((current) =>
+      current.filter((currentPrompt) => currentPrompt.id !== prompt.id)
+    );
+  };
 
   return (
     <div className="app-shell min-h-screen text-white">
@@ -84,7 +141,10 @@ export default function AdminPromptsPage() {
           </Link>
         }
         footerAction={
-          <button className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-sky-500/80 to-indigo-500/80 px-4 py-2 text-sm font-semibold shadow-[0_0_20px_rgba(120,160,255,0.55)] transition hover:brightness-110">
+          <button
+            onClick={handleOpenCreate}
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-sky-500/80 to-indigo-500/80 px-4 py-2 text-sm font-semibold shadow-[0_0_20px_rgba(120,160,255,0.55)] transition hover:brightness-110"
+          >
             <PlusIcon className="h-4 w-4" />
             New Prompt
           </button>
@@ -121,7 +181,7 @@ export default function AdminPromptsPage() {
                   <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-3 w-3 -translate-y-1/2 text-white/50" />
                 </div>
                 <button
-                  onClick={() => setIsModalOpen(true)}
+                  onClick={handleOpenCreate}
                   className="flex items-center gap-2 rounded-xl border border-sky-400/40 bg-gradient-to-r from-sky-500/80 to-indigo-500/80 px-4 py-2 text-xs font-semibold text-white shadow-[0_0_20px_rgba(120,160,255,0.6)] transition hover:brightness-110"
                 >
                   <PlusIcon className="h-4 w-4" />
@@ -131,13 +191,35 @@ export default function AdminPromptsPage() {
             }
           />
 
-          <AdminPromptTable prompts={filteredPrompts} />
+          <AdminPromptTable
+            prompts={filteredPrompts}
+            onEdit={handleOpenEdit}
+            onDelete={handleDelete}
+          />
         </div>
       </main>
 
-      <AdminPromptModal open={isModalOpen} onClose={() => setIsModalOpen(false)} />
+      <AdminPromptModal
+        open={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        initialValues={editingPrompt}
+        onSave={handleSave}
+        isSaving={isSaving}
+      />
     </div>
   );
+}
+
+function mapPrompt(prompt: any): AdminPrompt {
+  return {
+    id: String(prompt._id ?? prompt.id ?? ""),
+    title: String(prompt.title ?? ""),
+    category: String(prompt.category ?? ""),
+    tags: Array.isArray(prompt.tags) ? prompt.tags : [],
+    description: String(prompt.description ?? ""),
+    promptText: String(prompt.promptText ?? ""),
+    status: (prompt.status ?? "Active") as AdminPrompt["status"],
+  };
 }
 
 function PlusIcon({ className }: { className?: string }) {

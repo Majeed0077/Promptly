@@ -7,11 +7,15 @@ export type AdminPrompt = {
   title: string;
   category: string;
   tags: string[];
+  description: string;
+  promptText: string;
   status: "Active" | "Draft" | "Inactive";
 };
 
 type AdminPromptTableProps = {
   prompts: AdminPrompt[];
+  onEdit: (prompt: AdminPrompt) => void;
+  onDelete: (prompt: AdminPrompt) => void;
 };
 
 const statusStyles: Record<AdminPrompt["status"], string> = {
@@ -28,7 +32,11 @@ const categoryStyles: Record<string, string> = {
   Business: "bg-indigo-500/20 text-indigo-100 border-indigo-400/30",
 };
 
-export default function AdminPromptTable({ prompts }: AdminPromptTableProps) {
+export default function AdminPromptTable({
+  prompts,
+  onEdit,
+  onDelete,
+}: AdminPromptTableProps) {
   return (
     <div className="overflow-hidden rounded-2xl border border-white/10 bg-white/5 shadow-[0_0_40px_rgba(20,30,60,0.35)] backdrop-blur-xl">
       <div className="grid grid-cols-[1.6fr_1fr_0.9fr_0.7fr_0.7fr] gap-4 border-b border-white/10 bg-white/5 px-5 py-4 text-xs font-semibold uppercase tracking-[0.2em] text-white/60">
@@ -88,10 +96,16 @@ export default function AdminPromptTable({ prompts }: AdminPromptTableProps) {
               </span>
             </div>
             <div className="flex items-center gap-2">
-              <button className="rounded-lg border border-blue-400/40 bg-blue-500/20 p-2 text-blue-100 shadow-[0_0_16px_rgba(90,120,255,0.5)] transition hover:bg-blue-500/30">
+              <button
+                onClick={() => onEdit(prompt)}
+                className="rounded-lg border border-blue-400/40 bg-blue-500/20 p-2 text-blue-100 shadow-[0_0_16px_rgba(90,120,255,0.5)] transition hover:bg-blue-500/30"
+              >
                 <EditIcon className="h-4 w-4" />
               </button>
-              <button className="rounded-lg border border-rose-400/40 bg-rose-500/20 p-2 text-rose-100 shadow-[0_0_16px_rgba(255,110,150,0.35)] transition hover:bg-rose-500/30">
+              <button
+                onClick={() => onDelete(prompt)}
+                className="rounded-lg border border-rose-400/40 bg-rose-500/20 p-2 text-rose-100 shadow-[0_0_16px_rgba(255,110,150,0.35)] transition hover:bg-rose-500/30"
+              >
                 <TrashIcon className="h-4 w-4" />
               </button>
             </div>
