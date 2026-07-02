@@ -174,59 +174,61 @@ function FeaturedCollections() {
   return (
     <section
       id="collections"
-      className="mx-auto max-w-7xl px-5 py-20 md:px-8 md:py-24"
+      className="border-b border-white/10 bg-[#0b0b0a]"
     >
-      <div className="mb-10 flex flex-col justify-between gap-5 md:flex-row md:items-end">
-        <div>
-          <p className="text-sm font-semibold uppercase tracking-[0.14em] text-[#d7b46a]">
-            Featured Collections
+      <div className="mx-auto max-w-7xl px-5 py-20 md:px-8 md:py-24">
+        <div className="mb-10 flex flex-col justify-between gap-5 md:flex-row md:items-end">
+          <div>
+            <p className="text-sm font-semibold uppercase tracking-[0.14em] text-[#d7b46a]">
+              Featured Collections
+            </p>
+            <h2 className="mt-4 max-w-3xl text-4xl font-semibold tracking-[-0.05em] text-[#f7f3ea] md:text-6xl">
+              Start from a workflow, not a blank page.
+            </h2>
+          </div>
+          <p className="max-w-md text-[15px] leading-7 text-[#a9a39a]">
+            Curated prompt packs for the work people repeat every week.
           </p>
-          <h2 className="mt-4 max-w-3xl text-4xl font-semibold tracking-[-0.05em] text-[#f7f3ea] md:text-6xl">
-            Start from a workflow, not a blank page.
-          </h2>
         </div>
-        <p className="max-w-md text-[15px] leading-7 text-[#a9a39a]">
-          Curated prompt packs for the work people repeat every week.
-        </p>
-      </div>
 
-      <div className="grid gap-5 lg:grid-cols-2">
-        {featuredCollections.map((collection, index) => (
-          <Link
-            key={collection.title}
-            href={`/collections?category=${encodeURIComponent(collection.category)}`}
-            className={`group overflow-hidden rounded-[30px] border border-white/10 bg-[#15130f] p-3 text-left shadow-[0_24px_80px_rgba(0,0,0,0.22)] transition hover:-translate-y-1.5 hover:border-[rgba(215,180,106,0.34)] hover:bg-[#181510] ${
-              index === 0 ? "lg:col-span-2" : ""
-            }`}
-          >
-            <div
-              className={`grid gap-4 md:items-stretch ${
-                index === 0 ? "md:grid-cols-[1.16fr_0.84fr]" : ""
+        <div className="grid gap-5 lg:grid-cols-2">
+          {featuredCollections.map((collection, index) => (
+            <Link
+              key={collection.title}
+              href={`/collections?category=${encodeURIComponent(collection.category)}`}
+              className={`group overflow-hidden rounded-[30px] border border-white/10 bg-[#15130f] p-3 text-left shadow-[0_24px_80px_rgba(0,0,0,0.22)] transition hover:-translate-y-1.5 hover:border-[rgba(215,180,106,0.34)] hover:bg-[#181510] ${
+                index === 0 ? "lg:col-span-2" : ""
               }`}
             >
-              <PromptVisual
-                category={collection.category}
-                title={collection.title}
-                compact
-                elevated
-              />
-              <div className="flex flex-col p-4 md:p-5">
-                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#d7b46a]">
-                  {collection.category}
-                </p>
-                <h3 className="mt-4 text-2xl font-semibold leading-[1.05] tracking-[-0.045em] text-[#f7f3ea]">
-                  {collection.title}
-                </h3>
-                <p className="mt-3 text-sm leading-6 text-[#a9a39a]">
-                  {collection.description}
-                </p>
-                <span className="mt-auto pt-8 text-sm font-semibold text-[#d7b46a]">
-                  View collection -&gt;
-                </span>
+              <div
+                className={`grid gap-4 md:items-stretch ${
+                  index === 0 ? "md:grid-cols-[1.16fr_0.84fr]" : ""
+                }`}
+              >
+                <PromptVisual
+                  category={collection.category}
+                  title={collection.title}
+                  compact
+                  elevated
+                />
+                <div className="flex flex-col p-4 md:p-5">
+                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#d7b46a]">
+                    {collection.category}
+                  </p>
+                  <h3 className="mt-4 text-2xl font-semibold leading-[1.05] tracking-[-0.045em] text-[#f7f3ea]">
+                    {collection.title}
+                  </h3>
+                  <p className="mt-3 text-sm leading-6 text-[#a9a39a]">
+                    {collection.description}
+                  </p>
+                  <span className="mt-auto pt-8 text-sm font-semibold text-[#d7b46a]">
+                    View collection -&gt;
+                  </span>
+                </div>
               </div>
-            </div>
-          </Link>
-        ))}
+            </Link>
+          ))}
+        </div>
       </div>
     </section>
   );
