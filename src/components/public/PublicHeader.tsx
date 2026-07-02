@@ -17,7 +17,7 @@ export default function PublicHeader() {
 
   return (
     <header className="sticky top-0 z-50 border-b border-white/10 bg-[#0b0b0a]/86 shadow-[0_10px_40px_rgba(0,0,0,0.18)] backdrop-blur-xl">
-      <div className="mx-auto flex h-[82px] max-w-7xl items-center justify-between px-5 md:px-8">
+      <div className="flex h-[82px] w-full items-center justify-between px-5 md:px-10 xl:px-16 2xl:px-20">
         <Link href="/" className="flex items-center">
           <Image
             src="/logo.png"

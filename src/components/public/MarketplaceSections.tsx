@@ -40,7 +40,7 @@ function HeroSection() {
     <section className="relative overflow-hidden border-b border-white/10 bg-[#0b0b0a]">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_16%_8%,rgba(215,180,106,0.18),transparent_30rem),radial-gradient(circle_at_86%_22%,rgba(215,180,106,0.1),transparent_25rem),linear-gradient(180deg,rgba(255,255,255,0.035),transparent_42%)]" />
       <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-[#d7b46a]/35 to-transparent" />
-      <div className="relative mx-auto grid max-w-7xl gap-14 px-5 pb-20 pt-18 md:px-8 md:pb-28 md:pt-24 lg:grid-cols-[1.02fr_0.98fr] lg:items-center">
+      <div className="relative grid w-full gap-14 px-5 pb-20 pt-18 md:px-10 md:pb-28 md:pt-24 lg:grid-cols-[1.02fr_0.98fr] lg:items-center xl:px-16 2xl:px-20">
         <div>
           <p className="inline-flex rounded-full border border-[rgba(215,180,106,0.3)] bg-[rgba(215,180,106,0.11)] px-4 py-2 text-sm font-semibold text-[#d7b46a] shadow-[0_14px_46px_rgba(215,180,106,0.08)]">
             Prompt Library

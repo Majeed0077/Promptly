@@ -4,7 +4,7 @@ import Link from "next/link";
 export default function PublicFooter() {
   return (
     <footer id="blog" className="border-t border-white/10 bg-[#0f0e0c]">
-      <div className="mx-auto grid max-w-7xl gap-10 px-5 py-12 md:grid-cols-[1.4fr_1fr_1fr_1fr] md:px-8">
+      <div className="grid w-full gap-10 px-5 py-12 md:grid-cols-[1.4fr_1fr_1fr_1fr] md:px-10 xl:px-16 2xl:px-20">
         <div>
           <Link href="/" className="inline-flex items-center">
             <Image
@@ -45,7 +45,7 @@ export default function PublicFooter() {
           ]}
         />
       </div>
-      <div className="mx-auto max-w-7xl border-t border-white/10 px-5 py-5 text-sm text-[#777067] md:px-8">
+      <div className="w-full border-t border-white/10 px-5 py-5 text-sm text-[#777067] md:px-10 xl:px-16 2xl:px-20">
         Copyright 2026 promptiny.online. All rights reserved.
       </div>
     </footer>
